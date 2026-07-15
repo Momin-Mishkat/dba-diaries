@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activity — DBA Diaries</title>
+<meta name="description" content="Daily routines, checklists, and the small habits that catch problems before they become incidents. Written by Momin Mishkat, Oracle DBA.">
+<meta name="keywords" content="Oracle DBA, Oracle DBA blog, RMAN recovery, AWR performance tuning, Data Guard, OCI, PostgreSQL, database administrator India">
+<meta name="author" content="Momin Mishkat">
+<link rel="canonical" href="https://momin-mishkat.github.io/dba-diaries/activity.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2310151B'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23E8A33D' font-family='monospace'%3E%3E_%3C/text%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Activity — DBA Diaries">
+<meta property="og:description" content="Daily routines, checklists, and the small habits that catch problems before they become incidents. Written by Momin Mishkat, Oracle DBA.">
+<meta property="og:url" content="https://momin-mishkat.github.io/dba-diaries/activity.html">
+<meta property="og:image" content="https://momin-mishkat.github.io/dba-diaries/assets/momin-profile.jpg">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Activity — DBA Diaries">
+<meta name="twitter:description" content="Daily routines, checklists, and the small habits that catch problems before they become incidents. Written by Momin Mishkat, Oracle DBA.">
+<meta name="twitter:image" content="https://momin-mishkat.github.io/dba-diaries/assets/momin-profile.jpg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Momin Mishkat",
+  "jobTitle": "Oracle DBA",
+  "url": "https://momin-mishkat.github.io/dba-diaries/",
+  "sameAs": ["https://www.linkedin.com/in/momin-mishkat-01aa4b1b4/"]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css?v=2">
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <div class="logo">dba<span>_diaries</span></div>
+    <div class="navlinks">
+      <a href="index.html" id="nav-home">Home</a>
+      <a href="about.html" id="nav-about">About</a>
+      <a href="activity.html" id="nav-activity">Activity</a>
+      <a href="scenario.html" id="nav-scenario">Scenario</a>
+      <a href="blog.html" id="nav-blog">Blog</a>
+      <a href="architecture.html" id="nav-architecture">Architecture</a>
+      <button id="langToggle" class="lang-btn">हिंग्लिश</button>
+    </div>
+  </div>
+</nav>
+
+<section class="index-section wrap" id="tech-filter-wrap">
+  <div class="tech-filter" id="techFilter">
+    <span class="tech-filter-label" id="t-tech-label">Filter by tech:</span>
+    <button class="tech-tab active" data-tech="all">All</button>
+    <button class="tech-tab" data-tech="ORACLE">Oracle</button>
+    <button class="tech-tab" data-tech="OCI">OCI</button>
+    <button class="tech-tab" data-tech="POSTGRES">PostgreSQL</button>
+  </div>
+</section>
+
+<section class="index-section wrap" id="activity">
+  <div class="eyebrow">// activity</div>
+  <p class="section-desc" id="t-desc-activity">Daily routines, checklists, and the small habits that catch problems before they become incidents.</p>
+  <a class="post-entry" href="#post-1" data-tech="ORACLE">
+    <div class="meta"><span class="ts">2026-07-14</span><span class="tag">ACTIVITY</span><span class="tech-badge">ORACLE</span><span id="t-index-read">7 min read</span></div>
+    <h3 id="t-index-title">The Oracle DBA Daily Checklist: 10 Things I Check Before My Coffee Gets Cold</h3>
+  </a>
+</section>
+
+<article class="wrap" id="post-1">
+  <div class="meta-row">
+    <span class="tag">CHECKLIST</span>
+    <span class="ts">14 July 2026</span>
+    <span id="t-art-read">7 min read</span>
+  </div>
+
+  <h2 class="title" id="t-art-title">The Oracle DBA Daily Checklist: 10 Things I Check Before My Coffee Gets Cold</h2>
+  <p class="lede" id="t-art-lede">No dashboard tells you everything. Here's the ten-minute routine I run every single morning before I even open a ticket — built from a few too many mornings where I skipped it and paid for it later.</p>
+
+  <p id="t-art-intro">Every DBA has a version of this routine, and every DBA will swear theirs is the correct one. Mine has been rebuilt more times than I'd like to admit — usually right after something broke that a two-minute check would have caught the night before. So this isn't a "best practices" list copied from a certification guide. It's the actual sequence I run, in the actual order I run it, before I let myself touch the ticket queue.</p>
+
+  <h3 id="t-h3-1">1. Read the alert log first, not last</h3>
+  <p id="t-p-1">This sounds obvious and yet it's the first thing most people skip. I don't just grep for ORA- errors either — I scan the whole overnight window. A checkpoint that took twice as long as usual, or an instance that quietly restarted a background process, won't throw an error code, but it's telling you something.</p>
+  <div class="codeblock">tail -300 $ORACLE_BASE/diag/rdbms/&lt;db&gt;/&lt;instance&gt;/trace/alert_&lt;instance&gt;.log | grep -iE "ORA-|error|WARN|restart"</div>
+
+  <h3 id="t-h3-2">2. Tablespace and ASM headroom</h3>
+  <p id="t-p-2">I check this even on databases with autoextend on, because autoextend has a ceiling and disks have a limit too. A tablespace quietly crawling toward 90% at 2 a.m. on a batch-heavy night is a Monday-morning outage waiting to happen.</p>
+  <div class="codeblock">SELECT tablespace_name, ROUND(used_percent,2) used_pct
+FROM dba_tablespace_usage_metrics
+ORDER BY used_percent DESC;</div>
+
+  <h3 id="t-h3-3">3. RMAN backup status — actually verify it, don't trust the green tick</h3>
+  <p id="t-p-3">A backup job that "completed successfully" isn't the same as a backup you can restore from. I check the last backup's completion time against the expected window, and once a week I actually validate a piece of it.</p>
+  <div class="codeblock">RMAN&gt; LIST BACKUP SUMMARY;
+RMAN&gt; VALIDATE BACKUPSET &lt;backupset_key&gt;;</div>
+
+  <h3 id="t-h3-4">4. Data Guard / standby lag</h3>
+  <p id="t-p-4">If you're running a standby, apply lag is the metric that quietly ruins your RPO promises. I check transport lag and apply lag separately — they fail for different reasons, and conflating them is how people miss the real cause.</p>
+  <div class="codeblock">SELECT name, value, unit FROM v$dataguard_stats
+WHERE name IN ('transport lag','apply lag');</div>
+
+  <h3 id="t-h3-5">5. Long-running and blocked sessions</h3>
+  <p id="t-p-5">Before anyone complains that "the system is slow," I want to already know why. A five-second glance at blocking sessions saves twenty minutes of app-team finger-pointing later in the day.</p>
+  <div class="codeblock">SELECT blocking_session, sid, serial#, wait_class, seconds_in_wait
+FROM v$session WHERE blocking_session IS NOT NULL;</div>
+
+  <h3 id="t-h3-6">6. Scheduler and cron jobs — did last night's batch actually run?</h3>
+  <p id="t-p-6">Jobs fail silently more often than people think, especially chained jobs where step three depends on step one's output existing. I check DBA_SCHEDULER_JOB_RUN_DETAILS for anything that finished with an error status, not just anything that didn't run at all.</p>
+
+  <h3 id="t-h3-7">7. Wait event profile from the last 12 hours</h3>
+  <p id="t-p-7">Not a full AWR deep-dive — just a quick look at the top wait class overnight. If I see a sudden shift toward "Configuration" or "User I/O" waits that wasn't there yesterday, that's worth a proper look before it becomes a performance ticket.</p>
+
+  <h3 id="t-h3-8">8. Listener and connectivity health</h3>
+  <p id="t-p-8">An idle listener with a growing queue of failed connection attempts is an early symptom of network changes nobody told you about. I'd rather catch it than get paged for it.</p>
+  <div class="codeblock">lsnrctl status | grep -iE "instance|status|handler"</div>
+
+  <h3 id="t-h3-9">9. Archive log / FRA space</h3>
+  <p id="t-p-9">The Fast Recovery Area filling up is one of those failures that goes from "fine" to "database hung" faster than almost anything else on this list. It gets checked daily, no exceptions.</p>
+
+  <h3 id="t-h3-10">10. Yesterday's incident tickets — did the fix actually hold?</h3>
+  <p id="t-p-10">Anything I patched yesterday gets a follow-up check today. A workaround that holds for twelve hours and quietly comes back at 6 a.m. is the most common way "fixed" incidents turn into repeat incidents.</p>
+
+  <div class="divider">···</div>
+
+  <blockquote id="t-quote">None of this replaces monitoring tools. It replaces the assumption that monitoring tools catch everything — they don't, especially the slow, boring failures that build up over days.</blockquote>
+
+  <p id="t-closing-1">This whole routine takes me about ten minutes once it's a habit. The point isn't the individual checks — most of you reading this already know them. The point is doing them in a fixed order, every single day, before the ticket queue decides your priorities for you. The mornings I skip it are, reliably, the mornings something finds me instead.</p>
+
+  <p class="dim" id="t-closing-2">What does your morning routine look like? I'd genuinely like to know if I'm missing something obvious — drop it in the comments or find me on LinkedIn.</p>
+
+  <div class="signoff" id="t-signoff">— Momin Mishkat, written from a production support desk, coffee going cold, as usual.</div>
+</article>
+<footer class="wrap">
+  <span>© 2026 Momin Mishkat · DBA Diaries</span>
+  <span><a href="https://www.linkedin.com/in/momin-mishkat-01aa4b1b4/" target="_blank" rel="noopener">LinkedIn</a> · <a href="mailto:mishkatmomin69@gmail.com">Email</a></span>
+</footer>
+<script src="assets/script.js?v=2"></script>
+</body>
+</html>
