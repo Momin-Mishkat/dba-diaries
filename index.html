@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBA Diaries — Momin Mishkat, Oracle DBA</title>
+<meta name="description" content="Field notes from a working Oracle DBA — real performance tuning, RMAN backup & recovery, Data Guard, and production incident stories, written by Momin Mishkat.">
+<meta name="keywords" content="Oracle DBA, Oracle DBA blog, RMAN recovery, AWR performance tuning, Data Guard, Oracle backup and recovery, database administrator India">
+<meta name="author" content="Momin Mishkat">
+<link rel="canonical" href="https://momin-mishkat.github.io/dba-diaries/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2310151B'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23E8A33D' font-family='monospace'%3E%3E_%3C/text%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="DBA Diaries — Momin Mishkat, Oracle DBA">
+<meta property="og:description" content="Field notes from a working Oracle DBA — performance tuning, RMAN recovery, Data Guard, and production incident stories.">
+<meta property="og:url" content="https://momin-mishkat.github.io/dba-diaries/">
+<meta property="og:image" content="https://momin-mishkat.github.io/dba-diaries/assets/momin-profile.jpg">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="DBA Diaries — Momin Mishkat, Oracle DBA">
+<meta name="twitter:description" content="Field notes from a working Oracle DBA — performance tuning, RMAN recovery, Data Guard, and production incident stories.">
+<meta name="twitter:image" content="https://momin-mishkat.github.io/dba-diaries/assets/momin-profile.jpg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Momin Mishkat",
+  "jobTitle": "Oracle DBA",
+  "url": "https://momin-mishkat.github.io/dba-diaries/",
+  "sameAs": ["https://www.linkedin.com/in/momin-mishkat-01aa4b1b4/"]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12181C;
+    --bg-alt: #1A2228;
+    --bg-raised: #202A31;
+    --paper: #E8E3D8;
+    --paper-dim: #B9B4A8;
+    --amber: #E1A94C;
+    --amber-dim: #9C7A3D;
+    --teal: #5C9992;
+    --line: #33403A;
+    --danger: #C97C5D;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Source Sans 3', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--bg);
+    color:var(--paper);
+    font-family:var(--font-body);
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:var(--amber); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  ::selection{background:var(--amber); color:var(--bg);}
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:3px;
+  }
+
+  .wrap{
+    max-width:720px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:sticky; top:0; z-index:50;
+    background:rgba(18,24,28,0.9);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px;
+  }
+  .logo{
+    font-family:var(--font-mono);
+    font-size:14px;
+    letter-spacing:0.06em;
+    color:var(--paper);
+  }
+  .logo span{color:var(--amber);}
+  .navlinks{display:flex; gap:28px; font-family:var(--font-mono); font-size:13px;}
+  .navlinks a{color:var(--paper-dim);}
+  .navlinks a:hover{color:var(--amber); text-decoration:none;}
+  .lang-btn{
+    font-family:var(--font-mono);
+    font-size:12px;
+    background:transparent;
+    border:1px solid var(--amber-dim);
+    color:var(--amber);
+    padding:5px 10px;
+    border-radius:4px;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  .lang-btn:hover{background:var(--bg-alt);}
+  .lang-btn.active{background:var(--amber); color:var(--bg); font-weight:600;}
+
+  /* ---------- HERO / ALERT LOG ---------- */
+  .hero{
+    padding:72px 0 56px;
+    border-bottom:1px solid var(--line);
+  }
+  .logbox{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:20px 22px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--paper-dim);
+    line-height:1.9;
+    min-height:170px;
+  }
+  .logbox .ts{color:var(--teal);}
+  .logbox .lvl-info{color:var(--paper-dim);}
+  .logbox .lvl-warn{color:var(--amber);}
+  .logbox .cursor{
+    display:inline-block; width:8px; height:14px;
+    background:var(--amber);
+    animation:blink 1s steps(1) infinite;
+    vertical-align:middle;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  .hero h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:44px;
+    line-height:1.15;
+    margin:32px 0 12px;
+    color:var(--paper);
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--amber);
+    font-weight:500;
+  }
+  .hero p.tagline{
+    font-size:17px;
+    color:var(--paper-dim);
+    max-width:52ch;
+  }
+
+  /* ---------- ABOUT STRIP ---------- */
+  .about{
+    padding:36px 0;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+  }
+  .about .avatar{
+    width:76px;
+    height:76px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid var(--amber-dim);
+    flex-shrink:0;
+  }
+  .about .mark{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--amber-dim);
+    padding-top:4px;
+    white-space:nowrap;
+  }
+  .about .about-body{flex:1;}
+  .about p{
+    font-size:15px;
+    color:var(--paper-dim);
+  }
+
+  /* ---------- POST INDEX ---------- */
+  .index-section{padding:48px 0 8px;}
+  .index-section .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:18px;
+  }
+  .filter-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+    flex-wrap:wrap;
+  }
+  .filter-tab{
+    font-family:var(--font-mono);
+    font-size:12px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    padding:6px 14px;
+    border-radius:16px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .filter-tab:hover{border-color:var(--amber-dim); color:var(--paper);}
+  .filter-tab.active{background:var(--amber); border-color:var(--amber); color:var(--bg); font-weight:600;}
+  .tech-filter{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:14px 0;
+  }
+  .tech-filter-label{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--paper-dim);
+  }
+  .tech-tab{
+    font-family:var(--font-mono);
+    font-size:12px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    padding:6px 14px;
+    border-radius:16px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .tech-tab:hover{border-color:var(--teal); color:var(--paper);}
+  .tech-tab.active{background:var(--teal); border-color:var(--teal); color:var(--bg); font-weight:600;}
+  .section-desc{
+    font-size:14px;
+    color:var(--paper-dim);
+    margin-bottom:18px;
+    max-width:560px;
+  }
+  .coming-soon{
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--amber-dim);
+    padding:16px 0 28px;
+    border-top:1px solid var(--line);
+  }
+  .tech-badge{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--teal);
+    border:1px solid var(--teal);
+    border-radius:3px;
+    padding:1px 6px;
+  }
+  .post-entry.hidden{display:none;}
+  .post-entry{
+    display:block;
+    padding:18px 0;
+    border-top:1px solid var(--line);
+    position:relative;
+  }
+  .copy-link-btn{
+    font-family:var(--font-mono);
+    font-size:11px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    padding:3px 9px;
+    border-radius:4px;
+    cursor:pointer;
+    margin-left:auto;
+  }
+  .copy-link-btn:hover{border-color:var(--amber-dim); color:var(--amber);}
+  .codeblock{position:relative;}
+  .copy-code-btn{
+    position:absolute;
+    top:8px; right:8px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    padding:3px 9px;
+    border-radius:4px;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 0.15s;
+  }
+  .codeblock:hover .copy-code-btn{opacity:1;}
+  .copy-code-btn:hover{border-color:var(--amber-dim); color:var(--amber);}
+  .copy-code-btn.copied{color:var(--teal); border-color:var(--teal); opacity:1;}
+  .post-entry:last-child{border-bottom:1px solid var(--line);}
+  .post-entry .meta{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    display:flex; gap:14px; margin-bottom:6px;
+  }
+  .post-entry .meta .tag{color:var(--amber);}
+  .post-entry h3{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:22px;
+    color:var(--paper);
+  }
+  .post-entry:hover h3{color:var(--amber); text-decoration:underline;}
+
+  /* ---------- ARTICLE ---------- */
+  article{padding:64px 0 40px;}
+  article .meta-row{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    display:flex; gap:16px; margin-bottom:18px;
+  }
+  article .meta-row .tag{
+    color:var(--bg);
+    background:var(--amber);
+    padding:2px 8px;
+    border-radius:3px;
+    font-weight:600;
+  }
+  article h2.title{
+    font-family:var(--font-display);
+    font-size:36px;
+    font-weight:600;
+    line-height:1.2;
+    color:var(--paper);
+    margin-bottom:18px;
+  }
+  article .lede{
+    font-size:18px;
+    color:var(--paper-dim);
+    margin-bottom:36px;
+    max-width:56ch;
+  }
+  article h3{
+    font-family:var(--font-display);
+    font-size:23px;
+    font-weight:600;
+    color:var(--amber);
+    margin:40px 0 14px;
+  }
+  article p{
+    font-size:16px;
+    color:var(--paper);
+    margin-bottom:18px;
+    max-width:62ch;
+  }
+  article p.dim{color:var(--paper-dim);}
+  article ul, article ol{
+    margin:0 0 20px 22px;
+    max-width:60ch;
+  }
+  article li{margin-bottom:8px; font-size:16px;}
+
+  .codeblock{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-left:3px solid var(--teal);
+    border-radius:4px;
+    padding:16px 18px;
+    font-family:var(--font-mono);
+    font-size:13.5px;
+    color:var(--teal);
+    overflow-x:auto;
+    margin:8px 0 24px;
+    white-space:pre;
+  }
+
+  blockquote{
+    border-left:3px solid var(--amber);
+    padding-left:18px;
+    margin:28px 0;
+    font-family:var(--font-display);
+    font-style:italic;
+    font-size:19px;
+    color:var(--paper);
+    max-width:56ch;
+  }
+
+  .divider{
+    text-align:center;
+    font-family:var(--font-mono);
+    color:var(--amber-dim);
+    letter-spacing:0.3em;
+    margin:44px 0;
+  }
+
+  .signoff{
+    margin-top:48px;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--paper-dim);
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    border-top:1px solid var(--line);
+    padding:36px 0 60px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  footer a{color:var(--paper-dim);}
+  footer a:hover{color:var(--amber);}
+
+  @media (max-width:600px){
+    .hero h1{font-size:32px;}
+    article h2.title{font-size:27px;}
+    .about{flex-direction:column;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cursor{animation:none;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo">dba<span>_diaries</span></div>
+    <div class="navlinks">
+      <a href="#home" id="nav-home">Home</a>
+      <a href="#about" id="nav-about">About</a>
+      <a href="#activity" id="nav-activity">Activity</a>
+      <a href="#scenario" id="nav-scenario">Scenario</a>
+      <a href="#blog" id="nav-blog">Blog</a>
+      <a href="#architecture" id="nav-architecture">Architecture</a>
+      <button id="langToggle" class="lang-btn">हिंग्लिश</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap" id="home">
+  <div class="logbox" id="logbox"></div>
+  <h1 id="t-hero-h1">Welcome to <em>DBA Diaries.</em></h1>
+  <p class="tagline" id="t-hero-tag">A working Oracle DBA's field notes — tuning, backups, 3 a.m. pages, and everything nobody tells you in the documentation.</p>
+</header>
+
+<section class="about wrap" id="about">
+  <img src="assets/momin-profile.jpg" alt="Momin Mishkat" class="avatar">
+  <div class="about-body">
+    <div class="mark">// about</div>
+    <p id="t-about">I'm Momin Mishkat. I've spent my career keeping databases upright — chasing wait events, babysitting RMAN jobs, and explaining to application teams why "it was fine yesterday" isn't a root cause. This is where I write down what I actually do, not the sanitized version. New post every week, mostly about Oracle, sometimes about the general chaos of production support.</p>
+  </div>
+</section>
+
+<section class="index-section wrap" id="tech-filter-wrap">
+  <div class="tech-filter" id="techFilter">
+    <span class="tech-filter-label" id="t-tech-label">Filter by tech:</span>
+    <button class="tech-tab active" data-tech="all">All</button>
+    <button class="tech-tab" data-tech="ORACLE">Oracle</button>
+    <button class="tech-tab" data-tech="OCI">OCI</button>
+    <button class="tech-tab" data-tech="POSTGRES">PostgreSQL</button>
+  </div>
+</section>
+
+<section class="index-section wrap" id="activity">
+  <div class="eyebrow">// activity</div>
+  <p class="section-desc" id="t-desc-activity">Daily routines, checklists, and the small habits that catch problems before they become incidents.</p>
+  <a class="post-entry" href="#post-1" data-tech="ORACLE">
+    <div class="meta"><span class="ts">2026-07-14</span><span class="tag">ACTIVITY</span><span class="tech-badge">ORACLE</span><span id="t-index-read">7 min read</span></div>
+    <h3 id="t-index-title">The Oracle DBA Daily Checklist: 10 Things I Check Before My Coffee Gets Cold</h3>
+  </a>
+</section>
+
+<section class="index-section wrap" id="scenario">
+  <div class="eyebrow">// scenario</div>
+  <p class="section-desc" id="t-desc-scenario">Real production incidents, walked through decision by decision — not the sanitized version.</p>
+  <a class="post-entry" href="#post-2" data-tech="ORACLE">
+    <div class="meta"><span class="ts">2026-07-21</span><span class="tag">SCENARIO</span><span class="tech-badge">ORACLE</span><span id="t2-index-read">9 min read</span></div>
+    <h3 id="t2-index-title">The 2 A.M. Restore: An RMAN Recovery Scenario I Don't Want to Repeat</h3>
+  </a>
+</section>
+
+<section class="index-section wrap" id="blog">
+  <div class="eyebrow">// blog</div>
+  <p class="section-desc" id="t-desc-blog">Opinions, explainers, and general writing across Oracle, OCI, and PostgreSQL.</p>
+  <p class="coming-soon" id="t-soon-blog">New posts coming soon.</p>
+</section>
+
+<section class="index-section wrap" id="architecture">
+  <div class="eyebrow">// architecture</div>
+  <p class="section-desc" id="t-desc-arch">System design, high-availability topology, and cloud architecture notes.</p>
+  <p class="coming-soon" id="t-soon-arch">New posts coming soon.</p>
+</section>
+
+<article class="wrap" id="post-1">
+  <div class="meta-row">
+    <span class="tag">CHECKLIST</span>
+    <span class="ts">14 July 2026</span>
+    <span id="t-art-read">7 min read</span>
+  </div>
+
+  <h2 class="title" id="t-art-title">The Oracle DBA Daily Checklist: 10 Things I Check Before My Coffee Gets Cold</h2>
+  <p class="lede" id="t-art-lede">No dashboard tells you everything. Here's the ten-minute routine I run every single morning before I even open a ticket — built from a few too many mornings where I skipped it and paid for it later.</p>
+
+  <p id="t-art-intro">Every DBA has a version of this routine, and every DBA will swear theirs is the correct one. Mine has been rebuilt more times than I'd like to admit — usually right after something broke that a two-minute check would have caught the night before. So this isn't a "best practices" list copied from a certification guide. It's the actual sequence I run, in the actual order I run it, before I let myself touch the ticket queue.</p>
+
+  <h3 id="t-h3-1">1. Read the alert log first, not last</h3>
+  <p id="t-p-1">This sounds obvious and yet it's the first thing most people skip. I don't just grep for ORA- errors either — I scan the whole overnight window. A checkpoint that took twice as long as usual, or an instance that quietly restarted a background process, won't throw an error code, but it's telling you something.</p>
+  <div class="codeblock">tail -300 $ORACLE_BASE/diag/rdbms/&lt;db&gt;/&lt;instance&gt;/trace/alert_&lt;instance&gt;.log | grep -iE "ORA-|error|WARN|restart"</div>
+
+  <h3 id="t-h3-2">2. Tablespace and ASM headroom</h3>
+  <p id="t-p-2">I check this even on databases with autoextend on, because autoextend has a ceiling and disks have a limit too. A tablespace quietly crawling toward 90% at 2 a.m. on a batch-heavy night is a Monday-morning outage waiting to happen.</p>
+  <div class="codeblock">SELECT tablespace_name, ROUND(used_percent,2) used_pct
+FROM dba_tablespace_usage_metrics
+ORDER BY used_percent DESC;</div>
+
+  <h3 id="t-h3-3">3. RMAN backup status — actually verify it, don't trust the green tick</h3>
+  <p id="t-p-3">A backup job that "completed successfully" isn't the same as a backup you can restore from. I check the last backup's completion time against the expected window, and once a week I actually validate a piece of it.</p>
+  <div class="codeblock">RMAN&gt; LIST BACKUP SUMMARY;
+RMAN&gt; VALIDATE BACKUPSET &lt;backupset_key&gt;;</div>
+
+  <h3 id="t-h3-4">4. Data Guard / standby lag</h3>
+  <p id="t-p-4">If you're running a standby, apply lag is the metric that quietly ruins your RPO promises. I check transport lag and apply lag separately — they fail for different reasons, and conflating them is how people miss the real cause.</p>
+  <div class="codeblock">SELECT name, value, unit FROM v$dataguard_stats
+WHERE name IN ('transport lag','apply lag');</div>
+
+  <h3 id="t-h3-5">5. Long-running and blocked sessions</h3>
+  <p id="t-p-5">Before anyone complains that "the system is slow," I want to already know why. A five-second glance at blocking sessions saves twenty minutes of app-team finger-pointing later in the day.</p>
+  <div class="codeblock">SELECT blocking_session, sid, serial#, wait_class, seconds_in_wait
+FROM v$session WHERE blocking_session IS NOT NULL;</div>
+
+  <h3 id="t-h3-6">6. Scheduler and cron jobs — did last night's batch actually run?</h3>
+  <p id="t-p-6">Jobs fail silently more often than people think, especially chained jobs where step three depends on step one's output existing. I check DBA_SCHEDULER_JOB_RUN_DETAILS for anything that finished with an error status, not just anything that didn't run at all.</p>
+
+  <h3 id="t-h3-7">7. Wait event profile from the last 12 hours</h3>
+  <p id="t-p-7">Not a full AWR deep-dive — just a quick look at the top wait class overnight. If I see a sudden shift toward "Configuration" or "User I/O" waits that wasn't there yesterday, that's worth a proper look before it becomes a performance ticket.</p>
+
+  <h3 id="t-h3-8">8. Listener and connectivity health</h3>
+  <p id="t-p-8">An idle listener with a growing queue of failed connection attempts is an early symptom of network changes nobody told you about. I'd rather catch it than get paged for it.</p>
+  <div class="codeblock">lsnrctl status | grep -iE "instance|status|handler"</div>
+
+  <h3 id="t-h3-9">9. Archive log / FRA space</h3>
+  <p id="t-p-9">The Fast Recovery Area filling up is one of those failures that goes from "fine" to "database hung" faster than almost anything else on this list. It gets checked daily, no exceptions.</p>
+
+  <h3 id="t-h3-10">10. Yesterday's incident tickets — did the fix actually hold?</h3>
+  <p id="t-p-10">Anything I patched yesterday gets a follow-up check today. A workaround that holds for twelve hours and quietly comes back at 6 a.m. is the most common way "fixed" incidents turn into repeat incidents.</p>
+
+  <div class="divider">···</div>
+
+  <blockquote id="t-quote">None of this replaces monitoring tools. It replaces the assumption that monitoring tools catch everything — they don't, especially the slow, boring failures that build up over days.</blockquote>
+
+  <p id="t-closing-1">This whole routine takes me about ten minutes once it's a habit. The point isn't the individual checks — most of you reading this already know them. The point is doing them in a fixed order, every single day, before the ticket queue decides your priorities for you. The mornings I skip it are, reliably, the mornings something finds me instead.</p>
+
+  <p class="dim" id="t-closing-2">What does your morning routine look like? I'd genuinely like to know if I'm missing something obvious — drop it in the comments or find me on LinkedIn.</p>
+
+  <div class="signoff" id="t-signoff">— Momin Mishkat, written from a production support desk, coffee going cold, as usual.</div>
+</article>
+
+<article class="wrap" id="post-2">
+  <div class="meta-row">
+    <span class="tag">RECOVERY</span>
+    <span class="ts">21 July 2026</span>
+    <span id="t2-art-read">9 min read</span>
+  </div>
+
+  <h2 class="title" id="t2-art-title">The 2 A.M. Restore: An RMAN Recovery Scenario I Don't Want to Repeat</h2>
+  <p class="lede" id="t2-art-lede">A corrupted datafile, a partially-down application, and a decision I had about four minutes to make. Here's exactly how the recovery went, command by command, and what I'd do differently.</p>
+
+  <p id="t2-art-intro">This one didn't start with a ticket. It started with my phone lighting up at 1:52 a.m. because the monitoring alert had already beaten the app team to it. I want to walk through this one in detail — not the sanitized "and then we restored from backup" version, but the actual sequence, including the fifteen seconds I spent staring at the screen deciding what NOT to do first.</p>
+
+  <h3 id="t2-h3-1">1. The page — ORA-01578 in the alert log</h3>
+  <p id="t2-p-1">The alert log had one line that mattered, sitting quietly above a stack of session errors that were really just symptoms. This is the line that tells you it's not a slow query problem — it's a block problem.</p>
+  <div class="codeblock">ORA-01578: ORACLE data block corrupted (file # 7, block # 1045)
+ORA-01110: data file 7: '/u02/oradata/PRODDB/users01.dbf'</div>
+  <p id="t2-p-1b">First rule I've learned the hard way: don't touch anything yet. Don't restart the instance, don't bounce the listener, don't let anyone "just try running it again." Corruption doesn't fix itself, and a bad restart can turn a contained problem into a much bigger one.</p>
+
+  <h3 id="t2-h3-2">2. Confirm the blast radius before doing anything else</h3>
+  <p id="t2-p-2">One corrupt block reported in the alert log doesn't tell you if it's one block or fifty. I ran a validate against the whole datafile before deciding on an approach, because the recovery method genuinely depends on the answer.</p>
+  <div class="codeblock">RMAN&gt; VALIDATE DATAFILE 7;
+
+SQL&gt; SELECT file#, block#, blocks, corruption_type
+FROM v$database_block_corruption;</div>
+  <p id="t2-p-2b">In this case it came back with three contiguous blocks, all in the same datafile, all in the USERS tablespace. Not the whole datafile — just a small, localized patch. That single fact changed everything about the next step.</p>
+
+  <h3 id="t2-h3-3">3. Block-level recovery vs. full datafile restore</h3>
+  <p id="t2-p-3">This is the decision point people rush past. A full datafile restore is safer in the sense that it's simpler to reason about, but it also means restoring and rolling forward the entire file — more I/O, more downtime, more time the tablespace sits offline. With three isolated blocks and a recent backup available, block-level recovery was the faster and lower-impact option, and Oracle supports exactly this case.</p>
+
+  <h3 id="t2-h3-4">4. Taking only what's necessary offline</h3>
+  <p id="t2-p-4">Because the corruption was confined to one datafile in a tablespace with other datafiles, I didn't have to take the whole application down — just accept that a slice of USERS data was unavailable for the few minutes the recovery took. That's the difference between a partial degradation and a full outage, and it's worth checking before you assume you need a maintenance window.</p>
+  <div class="codeblock">SQL&gt; SELECT file_id, tablespace_name FROM dba_data_files
+WHERE tablespace_name = 'USERS';</div>
+
+  <h3 id="t2-h3-5">5. Running the block recovery</h3>
+  <p id="t2-p-5">With the exact file and block numbers in hand from the validate step, BLOCKRECOVER goes straight to the source — it restores and applies redo to just those blocks instead of the entire file.</p>
+  <div class="codeblock">RMAN&gt; BLOCKRECOVER DATAFILE 7 BLOCK 1045, 1046, 1047;</div>
+  <p id="t2-p-5b">If the corruption had come back covering the whole datafile instead of a tight cluster, this is where I'd have switched plans — taken the datafile offline, restored and recovered the full file, then brought it back online. Worth knowing both paths before you're standing in front of the decision at 2 a.m.</p>
+  <div class="codeblock">RMAN&gt; SQL 'ALTER DATABASE DATAFILE 7 OFFLINE';
+RMAN&gt; RESTORE DATAFILE 7;
+RMAN&gt; RECOVER DATAFILE 7;
+RMAN&gt; SQL 'ALTER DATABASE DATAFILE 7 ONLINE';</div>
+
+  <h3 id="t2-h3-6">6. Validate again before declaring victory</h3>
+  <p id="t2-p-6">A recovery that "completed successfully" gets exactly the same skepticism I give a backup that "completed successfully." I re-ran the validate and checked the corruption view again before telling anyone the incident was closed.</p>
+  <div class="codeblock">RMAN&gt; VALIDATE DATAFILE 7;
+
+SQL&gt; SELECT count(*) FROM v$database_block_corruption;</div>
+
+  <h3 id="t2-h3-7">7. The root cause — and why "disk issue" isn't a real answer</h3>
+  <p id="t2-p-7">The storage team's first answer was "a disk issue," which tells you nothing. It took a joint look at the storage controller logs to find the actual trigger — a firmware-level write error during a maintenance window earlier that night that never got flagged up to us. Worth pushing for the specific answer, because it directly decides whether this happens again next month.</p>
+
+  <h3 id="t2-h3-8">8. What I changed after this one</h3>
+  <p id="t2-p-8">Three things went in immediately: block change tracking, so future incremental recoveries are faster; a proactive weekly VALIDATE DATABASE job instead of waiting for corruption to announce itself in the alert log; and a direct alert wired to page on any ORA-01578, ORA-01578-adjacent, or v$database_block_corruption row appearing — instead of relying on someone reading the alert log at the right moment.</p>
+  <div class="codeblock">RMAN&gt; CONFIGURE BLOCK CHANGE TRACKING ON;</div>
+
+  <div class="divider">···</div>
+
+  <blockquote id="t2-quote">The backup isn't the safety net. Knowing exactly which recovery command to run, for which scenario, before you're standing in the middle of one — that's the actual safety net.</blockquote>
+
+  <p id="t2-closing-1">The whole incident, from page to all-clear, took about thirty-five minutes. Most of that was the validate steps, and I don't regret a single minute of it — a recovery you haven't verified is just a guess with extra steps. What took years to build wasn't the RMAN syntax; it was the judgment to know which of the two recovery paths a given corruption actually calls for.</p>
+
+  <p class="dim" id="t2-closing-2">Have you run block-level recovery in production, or always gone straight for the full restore? Curious how others weigh that trade-off — find me on LinkedIn.</p>
+
+  <div class="signoff" id="t2-signoff">— Momin Mishkat, written from a production support desk, coffee going cold, as usual.</div>
+</article>
+
+<footer class="wrap">
+  <span>© 2026 Momin Mishkat · DBA Diaries</span>
+  <span><a href="https://www.linkedin.com/in/momin-mishkat-01aa4b1b4/" target="_blank" rel="noopener">LinkedIn</a> · <a href="mailto:mishkatmomin69@gmail.com">Email</a></span>
+</footer>
+
+<script>
+  const lines = [
+    {ts:"2026-07-14 06:02:11", lvl:"info", text:"Instance identity: Momin Mishkat, Oracle DBA"},
+    {ts:"2026-07-14 06:02:12", lvl:"info", text:"Session started: coffee.status = BREWING"},
+    {ts:"2026-07-14 06:02:14", lvl:"warn", text:"New post available: see index below"},
+    {ts:"2026-07-14 06:02:15", lvl:"info", text:"Welcome. Scroll to read."}
+  ];
+
+  const box = document.getElementById('logbox');
+  let li = 0;
+
+  function typeLine(line, cb){
+    const div = document.createElement('div');
+    const ts = document.createElement('span');
+    ts.className = 'ts';
+    ts.textContent = '[' + line.ts + '] ';
+    const lvl = document.createElement('span');
+    lvl.className = 'lvl-' + line.lvl;
+    div.appendChild(ts);
+    div.appendChild(lvl);
+    box.appendChild(div);
+
+    let i = 0;
+    const speed = 14;
+    function step(){
+      if(i <= line.text.length){
+        lvl.textContent = line.text.slice(0, i);
+        i++;
+        setTimeout(step, speed);
+      } else {
+        cb();
+      }
+    }
+    step();
+  }
+
+  function runNext(){
+    if(li < lines.length){
+      typeLine(lines[li], () => { li++; setTimeout(runNext, 220); });
+    } else {
+      const cur = document.createElement('span');
+      cur.className = 'cursor';
+      box.appendChild(cur);
+    }
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    lines.forEach(l => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span class="ts">[' + l.ts + '] </span><span class="lvl-' + l.lvl + '">' + l.text + '</span>';
+      box.appendChild(div);
+    });
+  } else {
+    runNext();
+  }
+
+  // ---------- LANGUAGE TOGGLE ----------
+  const hinglish = {
+    "nav-about": "Mere Baare Mein",
+    "nav-home": "Home",
+    "nav-activity": "Activity",
+    "nav-scenario": "Scenario",
+    "nav-blog": "Blog",
+    "nav-architecture": "Architecture",
+    "t-tech-label": "Tech ke hisaab se filter karo:",
+    "t-desc-activity": "Daily routines, checklists, aur wo chhoti-chhoti habits jo bade incidents banne se pehle hi problems pakad leti hain.",
+    "t-desc-scenario": "Real production incidents, decision-by-decision walkthrough ke saath — sanitized version nahi.",
+    "t-desc-blog": "Opinions, explainers, aur general likhawat Oracle, OCI, aur PostgreSQL ke across.",
+    "t-soon-blog": "Naye posts jald aa rahe hain.",
+    "t-desc-arch": "System design, high-availability topology, aur cloud architecture ke notes.",
+    "t-soon-arch": "Naye posts jald aa rahe hain.",
+    "t-hero-h1": 'DBA Diaries mein <em>swagat hai.</em>',
+    "t-hero-tag": "Ek working Oracle DBA ke field notes — tuning, backups, raat ke 3 baje ke pages, aur wo sab kuch jo documentation mein kabhi nahi likha jaata.",
+    "t-about": 'Mai Momin Mishkat hu. Meri poori career databases ko upright rakhne mein gayi hai — wait events ke peeche bhaagna, RMAN jobs ko babysit karna, aur application team ko samjhaana ki "kal to sahi tha" koi root cause nahi hota. Yahan wahi likhta hu jo main actually karta hu, sanitized version nahi. Har hafte ek naya post, zyadatar Oracle par, kabhi-kabhi production support ki general afra-tafri par bhi.',
+    "t-index-read": "7 min ka read",
+    "t-index-title": "Oracle DBA ka Daily Checklist: Coffee thandi hone se pehle jo 10 cheezein main check karta hu",
+    "t-art-read": "7 min ka read",
+    "t-art-title": "Oracle DBA ka Daily Checklist: Coffee thandi hone se pehle jo 10 cheezein main check karta hu",
+    "t-art-lede": "Koi bhi dashboard aapko sab kuch nahi bataata. Ye wahi dus-minute wali routine hai jo main har subah, ticket kholne se pehle, follow karta hu — kai aisi subahon ke baad banayi gayi jab maine ye skip kiya aur baad mein bhugta.",
+    "t-art-intro": "Har DBA ke paas is routine ka apna version hota hai, aur har DBA kasam khayega ki uska hi sahi hai. Meri wali kayi baar rebuild ho chuki hai — zyadatar tab jab kuch aisa toota jo do-minute ke check se pehle hi pakda ja sakta tha. Toh ye koi certification guide se copy kiya hua \"best practices\" list nahi hai. Ye wahi actual sequence hai jo main follow karta hu, actual order mein, ticket queue ko haath lagane se pehle.",
+    "t-h3-1": "1. Sabse pehle alert log padho, aakhir mein nahi",
+    "t-p-1": "Ye baat obvious lagti hai, phir bhi log sabse pehle isi ko skip karte hain. Main sirf ORA- errors ke liye grep nahi karta — puri overnight window scan karta hu. Ek checkpoint jo normal se double time le raha ho, ya ek instance jo chupke se background process restart kar de, error code nahi dega, lekin kuch to bata raha hoga.",
+    "t-h3-2": "2. Tablespace aur ASM ka headroom",
+    "t-p-2": "Ye main autoextend-on databases par bhi check karta hu, kyunki autoextend ki bhi ek ceiling hoti hai aur disk ki bhi ek limit hoti hai. Raat 2 baje, batch-heavy night par, chupke se 90% ki taraf badhta hua tablespace, Monday morning ka outage bula raha hota hai.",
+    "t-h3-3": "3. RMAN backup status — sach mein verify karo, green tick par bharosa mat karo",
+    "t-p-3": 'Jo backup job "completed successfully" bole, zaroori nahi ki wo restore bhi ho sake. Main last backup ka completion time expected window se match karta hu, aur hafte mein ek baar uska ek hissa actually validate bhi karta hu.',
+    "t-h3-4": "4. Data Guard / standby lag",
+    "t-p-4": "Agar standby chala rahe ho, apply lag hi wo metric hai jo chupke se aapke RPO promises barbaad karta hai. Main transport lag aur apply lag alag-alag check karta hu — dono alag reason se fail hote hain, aur inhe mix karna hi real cause miss karne ka tareeka hai.",
+    "t-h3-5": "5. Long-running aur blocked sessions",
+    "t-p-5": '"System slow hai" ki complaint aane se pehle, mujhe pehle se pata hona chahiye ki kyun. Blocking sessions par ek paanch-second ki nazar, baad mein app-team ke twenty-minute finger-pointing se bacha deti hai.',
+    "t-h3-6": "6. Scheduler aur cron jobs — kya kal raat ka batch actually chala?",
+    "t-p-6": "Jobs jitna log sochte hain usse zyaada silently fail hote hain, especially chained jobs jisme step teen, step ek ke output par depend karta hai. Main DBA_SCHEDULER_JOB_RUN_DETAILS mein wo dhundta hu jo error status ke saath finish hua ho, sirf wo nahi jo chala hi nahi.",
+    "t-h3-7": "7. Pichle 12 ghante ka wait event profile",
+    "t-p-7": 'Ye koi full AWR deep-dive nahi — bas overnight top wait class ka ek quick look. Agar "Configuration" ya "User I/O" waits mein achanak shift dikhe jo kal nahi tha, wo performance ticket banne se pehle dekhne layak hai.',
+    "t-h3-8": "8. Listener aur connectivity health",
+    "t-p-8": "Ek idle listener jisme failed connection attempts ki queue badh rahi ho, network changes ka early symptom hota hai jo kisi ne aapko bataya hi nahi. Main isse khud pakadna prefer karta hu, uske liye page hone se pehle.",
+    "t-h3-9": "9. Archive log / FRA space",
+    "t-p-9": 'Fast Recovery Area ka bharna un failures mein se hai jo "fine" se "database hung" tak sabse tezi se jaata hai. Ye daily check hota hai, koi exception nahi.',
+    "t-h3-10": "10. Kal ki incident tickets — kya fix actually tika?",
+    "t-p-10": 'Jo bhi kal patch kiya, uska follow-up aaj hota hai. Ek workaround jo barah ghante tikta hai aur chupke se subah 6 baje wapas aa jaata hai — yahi sabse common tareeka hai jisse "fixed" incidents repeat incidents ban jaate hain.',
+    "t-quote": "Ye koi monitoring tools ki jagah nahi leta. Ye is assumption ki jagah leta hai ki monitoring tools sab kuch pakad leti hain — nahi pakadti, especially wo slow, boring failures jo dinon mein chupke se build hoti hain.",
+    "t-closing-1": "Ye poori routine, habit banne ke baad, mujhe kareeb dus minute leti hai. Baat individual checks ki nahi hai — aap mein se zyadatar ye pehle se jaante honge. Baat ye hai ki inhe ek fixed order mein, har roz, ticket queue ke priorities decide karne se pehle karna. Jis subah main ye skip karta hu, reliably usi subah kuch mujhe dhoondh leta hai.",
+    "t-closing-2": "Aapki morning routine kaisi dikhti hai? Genuinely jaanna chahta hu agar main kuch obvious miss kar raha hu — comments mein batao ya LinkedIn par mujhe dhundo.",
+    "t-signoff": "— Momin Mishkat, production support desk se likha gaya, coffee thandi ho chuki hai, hamesha ki tarah.",
+    "t2-index-read": "9 min ka read",
+    "t2-index-title": "Raat ke 2 Baje ka Restore: Ek RMAN Recovery Scenario jo Main Dobara Nahi Dekhna Chahta",
+    "t2-art-read": "9 min ka read",
+    "t2-art-title": "Raat ke 2 Baje ka Restore: Ek RMAN Recovery Scenario jo Main Dobara Nahi Dekhna Chahta",
+    "t2-art-lede": "Ek corrupted datafile, ek partially-down application, aur ek decision jo mujhe kareeb chaar minute mein lena tha. Ye raha poora recovery, command by command, aur main agli baar kya alag karunga.",
+    "t2-art-intro": "Ye kissa ticket se shuru nahi hua. Raat 1:52 baje mera phone baja kyunki monitoring alert app team se pehle hi pahunch chuka tha. Main ye poora detail mein batana chahta hu — wo sanitized \"aur phir humne backup se restore kar diya\" wala version nahi, balki actual sequence, un pandrah seconds samet jo maine screen ghoorte hue guzare ye decide karte hue ki pehle kya NAHI karna hai.",
+    "t2-h3-1": "1. Alert — alert log mein ORA-01578",
+    "t2-p-1": "Alert log mein ek hi line thi jo matter karti thi, session errors ke ek dhher ke upar chupchap baithi hui jo asal mein sirf symptoms the. Yahi wo line hai jo bataati hai ki ye slow query ka issue nahi hai — ye ek block ka issue hai.",
+    "t2-p-1b": "Pehla rule jo maine mushkil se seekha: abhi kuch mat chhedo. Instance restart mat karo, listener bounce mat karo, kisi ko \"bas ek baar phir try karne do\" mat karne do. Corruption apne aap theek nahi hoti, aur ek galat restart ek contained problem ko bahut bada issue bana sakta hai.",
+    "t2-h3-2": "2. Kuch bhi karne se pehle blast radius confirm karo",
+    "t2-p-2": "Alert log mein report hua ek corrupt block ye nahi bataata ki wo ek block hai ya pachaas. Maine poore datafile ke against ek validate chalaya kisi approach par decide karne se pehle, kyunki recovery method genuinely is jawab par depend karta hai.",
+    "t2-p-2b": "Is case mein result aaya teen contiguous blocks, sab ek hi datafile mein, sab USERS tablespace mein. Poora datafile nahi — bas ek chhota, localized patch. Isi ek fact ne agle step ke baare mein sab kuch badal diya.",
+    "t2-h3-3": "3. Block-level recovery vs. full datafile restore",
+    "t2-p-3": "Yahi wo decision point hai jise log jaldi mein nikal jaate hain. Full datafile restore is sense mein safer hai ki reason karna simple hai, lekin iska matlab hai poori file ko restore aur roll-forward karna — zyada I/O, zyada downtime, tablespace zyada der offline. Teen isolated blocks aur ek recent backup available hone ke saath, block-level recovery faster aur lower-impact option tha, aur Oracle exactly is case ko support karta hai.",
+    "t2-h3-4": "4. Sirf wahi offline lena jo zaroori ho",
+    "t2-p-4": "Kyunki corruption sirf ek datafile tak simit tha ek tablespace mein jisme aur bhi datafiles the, mujhe poori application down nahi karni padi — bas ye accept karna tha ki USERS data ka ek hissa un chand minutes ke liye unavailable rahega jab recovery chal rahi thi. Yahi fark hai partial degradation aur full outage mein, aur ye check karna zaroori hai maintenance window assume karne se pehle.",
+    "t2-h3-5": "5. Block recovery run karna",
+    "t2-p-5": "Validate step se mile exact file aur block numbers ke saath, BLOCKRECOVER seedha source tak jaata hai — ye poori file ki jagah sirf un blocks ko restore aur redo apply karta hai.",
+    "t2-p-5b": "Agar corruption poore datafile ko cover karta hua wapas aata, tight cluster ki jagah, to yahi wo point hota jahan main plan switch karta — datafile ko offline lekar, poori file restore aur recover karke, phir wapas online laakar. Dono paths pata hona zaroori hai isse pehle ki aap raat 2 baje decision ke saamne khade ho.",
+    "t2-h3-6": "6. Victory declare karne se pehle dubara validate karo",
+    "t2-p-6": "Ek recovery jo \"completed successfully\" ho, usse main utni hi skepticism deta hu jitni ek backup ko jo \"completed successfully\" ho. Maine validate dubara chalaya aur corruption view dubara check kiya kisi ko batane se pehle ki incident band ho gaya.",
+    "t2-h3-7": "7. Root cause — aur \"disk issue\" jawab kyun nahi hai",
+    "t2-p-7": "Storage team ka pehla jawab tha 'disk issue,' jo asal mein kuch nahi bataata. Actual trigger dhoondne ke liye storage controller logs par joint look lagana pada — ek firmware-level write error jo usi raat earlier maintenance window ke dauraan hua aur kabhi humein flag hi nahi hua. Specific jawab ke liye push karna zaroori hai, kyunki ye seedha decide karta hai ki ye agle mahine dobara hoga ya nahi.",
+    "t2-h3-8": "8. Iske baad maine kya badla",
+    "t2-p-8": "Teen cheezein turant implement hui: block change tracking, taaki future incremental recoveries faster ho; corruption ke alert log mein khud announce hone ka wait karne ki jagah, ek proactive weekly VALIDATE DATABASE job; aur ek direct alert jo kisi bhi ORA-01578 ya v$database_block_corruption row aane par page kare — kisi ke sahi waqt par alert log padhne par depend karne ki jagah.",
+    "t2-quote": "Backup safety net nahi hai. Exactly ye jaanna ki kaunsi recovery command, kaunse scenario ke liye chalani hai, isse pehle ki aap ek ke beech khade ho — yahi actual safety net hai.",
+    "t2-closing-1": "Poora incident, page se all-clear tak, kareeb pachees-chalees minute liya. Zyaadatar waqt validate steps mein gaya, aur mujhe ek minute ka bhi afsos nahi — ek recovery jo verify nahi hui, wo bas extra steps wala guess hai. Jo cheez saalon mein bani wo RMAN syntax nahi thi; wo judgment thi ki diye gaye corruption ke liye do recovery paths mein se kaunsa actually chahiye.",
+    "t2-closing-2": "Kya aapne kabhi production mein block-level recovery chalayi hai, ya hamesha seedha full restore par gaye? Curious hu ki dusre log ye trade-off kaise weigh karte hain — LinkedIn par mujhe dhundo.",
+    "t2-signoff": "— Momin Mishkat, production support desk se likha gaya, coffee thandi ho chuki hai, hamesha ki tarah."
+  };
+
+  // ---------- TECH FILTER ----------
+  const techTabs = document.querySelectorAll('.tech-tab');
+  const postEntries = document.querySelectorAll('.post-entry');
+  techTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      techTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const filter = tab.dataset.tech;
+      postEntries.forEach(entry => {
+        const match = filter === 'all' || entry.dataset.tech === filter;
+        entry.classList.toggle('hidden', !match);
+      });
+    });
+  });
+
+  // ---------- COPY CODE BUTTONS ----------
+  document.querySelectorAll('.codeblock').forEach(block => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-code-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', () => {
+      const text = block.innerText.replace('Copy', '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    });
+    block.appendChild(btn);
+  });
+
+  // ---------- COPY LINK BUTTONS ON ARTICLES ----------
+  document.querySelectorAll('article').forEach(art => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-link-btn';
+    btn.textContent = '🔗 Copy link';
+    btn.addEventListener('click', () => {
+      const url = window.location.origin + window.location.pathname + '#' + art.id;
+      navigator.clipboard.writeText(url).then(() => {
+        btn.textContent = '✓ Copied';
+        setTimeout(() => { btn.textContent = '🔗 Copy link'; }, 1800);
+      });
+    });
+    const metaRow = art.querySelector('.meta-row');
+    if (metaRow) metaRow.appendChild(btn);
+  });
+
+  const langBtn = document.getElementById('langToggle');
+  const originals = {};
+  let isHinglish = false;
+
+  langBtn.addEventListener('click', () => {
+    isHinglish = !isHinglish;
+    langBtn.textContent = isHinglish ? 'English' : 'हिंग्लिश';
+    langBtn.classList.toggle('active', isHinglish);
+    document.documentElement.lang = isHinglish ? 'hi' : 'en';
+
+    Object.keys(hinglish).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (isHinglish) {
+        if (!(id in originals)) originals[id] = el.innerHTML;
+        el.innerHTML = hinglish[id];
+      } else if (originals[id] !== undefined) {
+        el.innerHTML = originals[id];
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
