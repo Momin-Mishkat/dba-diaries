@@ -373,6 +373,19 @@
     color:var(--paper-dim);
   }
 
+  /* ---------- COMMENTS ---------- */
+  .comments-section{
+    padding:16px 0 56px;
+  }
+  .comments-section .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:16px;
+  }
+
   /* ---------- FOOTER ---------- */
   footer{
     border-top:1px solid var(--line);
