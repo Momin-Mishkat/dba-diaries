@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://momin-mishkat.github.io/dba-diaries/sitemap.xml
